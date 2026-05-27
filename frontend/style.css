@@ -128,6 +128,15 @@ button#submit-btn:disabled {
   accent-color: var(--blue);
 }
 
+.provider-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.provider-disabled input {
+  cursor: not-allowed;
+}
+
 .badge {
   font-size: 0.72rem;
   background: var(--blue-light);

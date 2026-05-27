@@ -12,6 +12,38 @@ const errorSection = document.getElementById("error-section");
 const errorMsg = document.getElementById("error-msg");
 const resultsEl = document.getElementById("results");
 
+async function initProviders() {
+  try {
+    const resp = await fetch(`${API_BASE}/providers`);
+    if (!resp.ok) return;
+    const available = await resp.json();
+
+    for (const [provider, enabled] of Object.entries(available)) {
+      const radio = document.querySelector(`input[name="provider"][value="${provider}"]`);
+      if (!radio) continue;
+      const label = radio.closest("label");
+
+      if (!enabled) {
+        radio.disabled = true;
+        label.classList.add("provider-disabled");
+        label.title = `${provider} API key not configured`;
+        // If the disabled option was selected, move selection to the first available one
+        if (radio.checked) radio.checked = false;
+      }
+    }
+
+    // Ensure a valid provider is always selected
+    const firstEnabled = document.querySelector('input[name="provider"]:not([disabled])');
+    if (firstEnabled && !document.querySelector('input[name="provider"]:checked')) {
+      firstEnabled.checked = true;
+    }
+  } catch {
+    // Backend not reachable yet — leave radios as-is
+  }
+}
+
+initProviders();
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
