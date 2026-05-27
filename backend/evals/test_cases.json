@@ -1,0 +1,74 @@
+[
+  {
+    "id": "bluesky-jeopardy",
+    "description": "Bluesky boasts 200+ Jeopardy contestants",
+    "url": "https://bsky.app/profile/bsky.app/post/3mlvllqtnmk2g",
+    "expected_topics": ["jeopardy", "bluesky", "contestants", "social media"]
+  },
+  {
+    "id": "bluesky-atmosphere-apps",
+    "description": "Bluesky announces private connections to other Atmosphere apps",
+    "url": "https://bsky.app/profile/bsky.app/post/3ml54ry2iwc2x",
+    "expected_topics": ["bluesky", "atmosphere", "atproto", "apps"]
+  },
+  {
+    "id": "bluesky-breadsky",
+    "description": "Bluesky #Breadsky community experiment with wild yeast",
+    "url": "https://bsky.app/profile/bsky.app/post/3ml7bvrr4yk2l",
+    "expected_topics": ["bluesky", "bread", "community", "yeast"]
+  },
+  {
+    "id": "atproto-typescript-esm",
+    "description": "AT Protocol TypeScript packages now ship as ESM",
+    "url": "https://bsky.app/profile/atproto.com/post/3mmf72xkixc23",
+    "expected_topics": ["typescript", "esm", "atproto", "package"]
+  },
+  {
+    "id": "atproto-wordpress",
+    "description": "WordPress sites can publish to the Atmosphere via atproto",
+    "url": "https://bsky.app/profile/atproto.com/post/3mmcgpxi42s2o",
+    "expected_topics": ["wordpress", "atproto", "bluesky", "publish"]
+  },
+  {
+    "id": "simonwillison-datasette-agent",
+    "description": "Simon Willison releases Datasette Agent, a conversational AI assistant",
+    "url": "https://bsky.app/profile/simonwillison.net/post/3mmfa2jn56c25",
+    "expected_topics": ["datasette", "agent", "ai", "sql"]
+  },
+  {
+    "id": "simonwillison-morning-surprise",
+    "description": "Simon Willison on an unexpected technology he explored in the morning",
+    "url": "https://bsky.app/profile/simonwillison.net/post/3mmppliwaes23",
+    "expected_topics": ["ai", "technology", "model", "llm"]
+  },
+  {
+    "id": "verge-pope-ai",
+    "description": "The Verge asks whether the Pope used AI to write a warning about AI",
+    "url": "https://bsky.app/profile/theverge.com/post/3mmsbh3ogxk25",
+    "expected_topics": ["pope", "ai", "artificial intelligence", "encyclical"]
+  },
+  {
+    "id": "verge-nasa-moon-base",
+    "description": "NASA permanent Moon base plans with three missions this year",
+    "url": "https://bsky.app/profile/theverge.com/post/3mms26qwtz62t",
+    "expected_topics": ["nasa", "moon", "lunar", "mission"]
+  },
+  {
+    "id": "nyt-nasa-moon-buggies",
+    "description": "NYT reports NASA contracts for 21st-century moon buggies",
+    "url": "https://bsky.app/profile/nytimes.com/post/3mmtdsuo56g23",
+    "expected_topics": ["nasa", "moon", "rover", "contract"]
+  },
+  {
+    "id": "wired-tiny-octopus",
+    "description": "Wired covers a golf-ball-sized octopus near Darwin Island",
+    "url": "https://bsky.app/profile/wired.com/post/3mmt7armk6k2x",
+    "expected_topics": ["octopus", "darwin island", "species", "ocean"]
+  },
+  {
+    "id": "tc-us-plutonium-startups",
+    "description": "TechCrunch on US government weapons-grade plutonium and startup contracts",
+    "url": "https://bsky.app/profile/techcrunch.com/post/3mms2u6qtby2g",
+    "expected_topics": ["plutonium", "nuclear", "startup", "government"]
+  }
+]

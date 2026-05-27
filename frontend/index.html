@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bluesky Post Explainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span>Bluesky Post Explainer</span>
+      </div>
+      <p class="tagline">Paste a Bluesky post URL and get AI-powered context in seconds.</p>
+    </header>
+
+    <main>
+      <section class="input-section">
+        <form id="explain-form">
+          <div class="url-row">
+            <input
+              type="url"
+              id="post-url"
+              placeholder="https://bsky.app/profile/handle.bsky.social/post/..."
+              required
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="submit" id="submit-btn">Explain</button>
+          </div>
+
+          <div class="provider-row">
+            <span class="provider-label">Provider:</span>
+            <label class="provider-option">
+              <input type="radio" name="provider" value="openai" checked />
+              <span>OpenAI <span class="badge">gpt-4o + web search</span></span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="provider" value="anthropic" />
+              <span>Anthropic <span class="badge">claude-sonnet-4-6 + DDG</span></span>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <section id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Fetching post and searching for context…</p>
+      </section>
+
+      <section id="error-section" class="hidden">
+        <div class="error-card">
+          <strong>Error</strong>
+          <p id="error-msg"></p>
+        </div>
+      </section>
+
+      <section id="results" class="hidden">
+        <div class="post-card">
+          <div class="post-header">
+            <div class="author-info">
+              <span class="display-name" id="res-display-name"></span>
+              <span class="handle" id="res-handle"></span>
+            </div>
+            <div class="post-stats">
+              <span id="res-likes">♡ 0</span>
+              <span id="res-reposts">↺ 0</span>
+              <span id="res-replies">💬 0</span>
+            </div>
+          </div>
+          <p class="post-text" id="res-text"></p>
+          <div id="res-images" class="post-images"></div>
+          <div id="res-external" class="external-embed hidden">
+            <a id="res-ext-link" href="#" target="_blank" rel="noopener">
+              <strong id="res-ext-title"></strong>
+              <span id="res-ext-desc"></span>
+            </a>
+          </div>
+        </div>
+
+        <div class="explanation-card">
+          <div class="explanation-header">
+            <h2>Context</h2>
+            <span class="provider-tag" id="res-provider"></span>
+          </div>
+          <ul id="res-bullets" class="bullets"></ul>
+        </div>
+
+        <div id="citations-section" class="citations-card hidden">
+          <h3>Sources</h3>
+          <ul id="res-citations"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
