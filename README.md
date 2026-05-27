@@ -4,12 +4,16 @@ AI agent that explains Bluesky posts by surfacing relevant web context. Paste a 
 
 ## Demo
 
-> Input: `https://bsky.app/profile/wiiiiics.bsky.social/post/3lfqkfbkbes2k`
+> Input: `https://bsky.app/profile/theverge.com/post/3mmsbh3ogxk25`
+>
+> Post: *"Did the Pope use AI to warn us about the dangers of AI?"*
 >
 > Output:
-> - The "Ralph Wiggum technique" is a bash-loop pattern that repeatedly runs an AI coding agent until the task completes, named after the Simpsons character known for bumbling persistence.
-> - Coined by Geoffrey Huntley in mid-2025, the name stuck because the community found it funny rather than technical — "I'm in danger" became a meme for agentic AI loops.
-> - The technique gained traction as a minimal alternative to complex orchestration frameworks like LangGraph or AutoGPT.
+> - In January 2025, Pope Francis released *Antiqua et Nova*, the first papal document dedicated entirely to artificial intelligence, warning of threats to human dignity, democracy, and truth.
+> - The encyclical's unusually polished and technically precise language sparked widespread speculation that it may have been drafted with AI assistance — an irony that went viral given its critical tone toward the technology.
+> - The Vatican denied using AI in its composition, but the controversy itself became a major part of the story, drawing responses from ethicists, journalists, and tech leaders.
+> - The document calls on governments and companies to ground AI development in ethical principles and human oversight, framing it as a moral rather than purely technical challenge.
+> - It is considered the most influential religious statement on AI to date and was cited in multiple international AI governance debates throughout 2025.
 
 ---
 
