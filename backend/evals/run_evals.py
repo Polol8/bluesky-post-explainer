@@ -15,8 +15,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+# Load .env from repo root so BACKEND_PORT is available even when running directly
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
+
+_backend_port = os.getenv("BACKEND_PORT", "8000")
+API_URL = os.getenv("API_URL", f"http://localhost:{_backend_port}")
 PROVIDER = os.getenv("PROVIDER", "openai")
 PASS_THRESHOLD = 0.5  # fraction of expected_topics that must appear
 

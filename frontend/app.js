@@ -1,9 +1,8 @@
-// When served by Docker/nginx on port 80 or 3000, use the proxied /api path.
-// For local dev (open index.html directly, or python -m http.server), call the backend directly.
-const API_BASE =
-  window.location.port === "3000" || window.location.port === "80" || window.location.port === ""
-    ? "/api"
-    : "http://localhost:8000";
+// Served by nginx (Docker) → use the proxied /api path (port-agnostic).
+// Opened as a local file → call the backend on BACKEND_PORT directly.
+const API_BASE = window.location.protocol === "file:"
+  ? "http://localhost:8000"
+  : "/api";
 
 const form = document.getElementById("explain-form");
 const urlInput = document.getElementById("post-url");
