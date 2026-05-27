@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -18,6 +19,8 @@ import httpx
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 PROVIDER = os.getenv("PROVIDER", "openai")
 PASS_THRESHOLD = 0.5  # fraction of expected_topics that must appear
+
+REPORT_PATH = Path(__file__).parent / "results.md"
 
 
 def score(bullets: list[str], expected_topics: list[str]) -> float:
@@ -39,24 +42,27 @@ async def run_case(client: httpx.AsyncClient, case: dict) -> dict:
         resp.raise_for_status()
         data = resp.json()
         bullets = data["bullets"]
+        citations = data.get("citations", [])
         s = score(bullets, case.get("expected_topics", []))
         return {
             "id": case["id"],
             "description": case["description"],
+            "url": case["url"],
             "score": s,
             "passed": s >= PASS_THRESHOLD,
             "bullets": bullets,
-            "num_citations": len(data.get("citations", [])),
+            "citations": citations,
             "error": None,
         }
     except Exception as exc:
         return {
             "id": case["id"],
             "description": case["description"],
+            "url": case["url"],
             "score": 0.0,
             "passed": False,
             "bullets": [],
-            "num_citations": 0,
+            "citations": [],
             "error": str(exc),
         }
 
@@ -68,10 +74,59 @@ def print_result(r: dict) -> None:
     if r["error"]:
         print(f"       ERROR: {r['error']}")
     else:
-        print(f"       Score: {r['score']:.0%}  Citations: {r['num_citations']}")
+        print(f"       Score: {r['score']:.0%}  Citations: {len(r['citations'])}")
         for b in r["bullets"]:
             print(f"       • {b}")
     print()
+
+
+def write_report(results: list[dict], passed: int, avg: float) -> None:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines: list[str] = []
+
+    lines += [
+        f"# Eval Report",
+        f"",
+        f"| | |",
+        f"|---|---|",
+        f"| Date | {now} |",
+        f"| Provider | `{PROVIDER}` |",
+        f"| API | `{API_URL}` |",
+        f"| Passed | **{passed}/{len(results)}** |",
+        f"| Avg score | **{avg:.0%}** |",
+        f"",
+        f"---",
+        f"",
+    ]
+
+    for r in results:
+        badge = "✅ PASS" if r["passed"] else "❌ FAIL"
+        lines += [
+            f"## {badge} — {r['id']}",
+            f"",
+            f"**{r['description']}**  ",
+            f"[{r['url']}]({r['url']})",
+            f"",
+        ]
+
+        if r["error"]:
+            lines += [f"> **Error:** {r['error']}", f""]
+        else:
+            lines += [f"Score: `{r['score']:.0%}` | Citations: `{len(r['citations'])}`", f""]
+            for b in r["bullets"]:
+                lines.append(f"- {b}")
+            lines.append("")
+            if r["citations"]:
+                lines.append("**Sources**")
+                for c in r["citations"]:
+                    lines.append(f"- [{c['title']}]({c['url']})")
+                lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Report saved → {REPORT_PATH}")
 
 
 async def main() -> None:
@@ -85,7 +140,6 @@ async def main() -> None:
     print("=" * 60)
 
     async with httpx.AsyncClient() as client:
-        # Run sequentially to avoid hammering the API / search providers
         results = []
         for case in cases:
             print(f"Running: {case['id']} ...", flush=True)
@@ -101,6 +155,8 @@ async def main() -> None:
     print("=" * 60)
     print(f"Passed : {passed}/{len(results)}")
     print(f"Avg    : {avg:.0%}")
+
+    write_report(results, passed, avg)
 
     sys.exit(0 if passed == len(results) else 1)
 

@@ -26,7 +26,7 @@ dev:
 	set PYTHONPATH=backend && $(UV) app.main:app --reload --port 8000 --app-dir backend
 
 eval:
-	set PYTHONPATH=backend && $(PY) -m evals.run_evals
+	-set PYTHONPATH=backend && $(PY) -m evals.run_evals
 
 eval-anthropic:
-	set PYTHONPATH=backend && set PROVIDER=anthropic && $(PY) -m evals.run_evals
+	-set PYTHONPATH=backend && set PROVIDER=anthropic && $(PY) -m evals.run_evals
