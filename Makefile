@@ -8,7 +8,7 @@ FRONTEND_PORT ?= 3000
 
 help:
 	@echo.
-	@echo   up              Create .venv, install deps, docker compose up --build
+	@echo   up              Install deps, docker compose up --build
 	@echo   clean           docker compose down + remove backend\.venv
 	@echo   dev             Run backend locally with hot-reload
 	@echo   eval            Run eval harness - OpenAI provider
@@ -20,7 +20,8 @@ help:
 	@echo.
 
 up:
-	cd backend && uv venv .venv
+	where uv >nul 2>&1 || (powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex" && echo. && echo Installed uv — open a new terminal and run 'make up' again. && exit 1)
+	if not exist $(VENV) (cd backend && uv venv --python 3.12 .venv)
 	cd backend && uv pip install -r requirements.txt
 	docker compose up --build
 
