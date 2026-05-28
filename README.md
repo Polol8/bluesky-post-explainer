@@ -24,7 +24,7 @@ bluesky-context/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py           # FastAPI — POST /explain, GET /providers, GET /health
-│   │   ├── agent.py          # LLM orchestration (OpenAI + Anthropic)
+│   │   ├── agent.py          # LLM orchestration (OpenAI + Anthropic + Ollama)
 │   │   ├── bluesky.py        # AT Protocol public API client
 │   │   └── models.py         # Pydantic request/response models
 │   ├── evals/
@@ -37,6 +37,9 @@ bluesky-context/
 │   ├── index.html            # Single-page UI
 │   ├── style.css
 │   └── app.js
+├── scripts/
+│   ├── setup_ollama.py       # Pulls + warms up the Ollama model after `make up`
+│   └── test_stack.py         # Smoke-tests DDG search and Ollama inference
 ├── nginx.conf                # Proxies /api/* → backend container
 ├── docker-compose.yml
 ├── Makefile
@@ -49,7 +52,7 @@ bluesky-context/
 ┌─────────────────────────────────────────────────────────────────┐
 │  Browser  (localhost:3000)                                       │
 │                                                                  │
-│  [ Bluesky post URL ] + [ Provider: OpenAI | Anthropic ]        │
+│  [ Bluesky post URL ] + [ Provider: OpenAI | Anthropic | Ollama]│
 │                │                                                 │
 │                │  POST /api/explain                              │
 └────────────────┼────────────────────────────────────────────────┘
@@ -89,6 +92,16 @@ bluesky-context/
 │     │                                                    │       │
 │     └────────────────────────────────────────────────────┘       │
 │                                                                  │
+│     ┌─── Ollama path ───────────────────────────────────┐       │
+│     │                                                    │       │
+│     │  Local model  (configurable via OLLAMA_MODEL)     │       │
+│     │    ├─ DuckDuckGo pre-search (no extra key)        │       │
+│     │    │    └─ results injected into prompt           │       │
+│     │    ├─ /api/chat  (Ollama native, think=false)     │       │
+│     │    └─ output: bullets  (citations from DDG URLs)  │       │
+│     │                                                    │       │
+│     └────────────────────────────────────────────────────┘       │
+│                                                                  │
 │  3. Return  { bullets, post, citations, provider }              │
 └────────────────┬────────────────────────────────────────────────┘
                  │
@@ -103,20 +116,23 @@ bluesky-context/
 
 ## Design Decisions
 
-**Why two LLM providers?**
-OpenAI's Responses API has `web_search_preview` built in — one call handles searching and synthesizing, with citations as structured annotations. For Anthropic, there is no built-in search, so the agent uses Claude's tool-use loop with DuckDuckGo (no extra API key needed). This shows both architectures cleanly.
+**Why three LLM providers?**
+OpenAI's Responses API has `web_search_preview` built in — one call handles searching and synthesizing, with citations as structured annotations. For Anthropic, there is no built-in search, so the agent uses Claude's tool-use loop with DuckDuckGo (no extra API key needed). Ollama adds a fully local, zero-cost option for users who want to run inference on their own hardware.
 
 **Why the OpenAI Responses API instead of Chat Completions?**
 The Responses API surfaces URL citations as typed annotations on the output text, making citation extraction reliable without regex hacks. It also handles multi-turn search internally, reducing code complexity.
 
-**Why DuckDuckGo for the Anthropic path?**
-It requires no additional API key, making the Anthropic path self-contained (only `ANTHROPIC_API_KEY` needed). For production, swapping in Tavily or Serper is a one-line change in `agent.py`.
+**Why DuckDuckGo for the Anthropic and Ollama paths?**
+It requires no additional API key, making both paths self-contained. For production, swapping in Tavily or Serper is a one-line change in `agent.py`. The `ddgs` package is used (the official successor to `duckduckgo-search`); if DDG rate-limits a request, the agent falls back gracefully to responding without search context rather than failing.
+
+**Why the Ollama native API instead of the OpenAI-compatible endpoint?**
+Ollama's `/api/chat` endpoint exposes the `think` parameter, which disables extended chain-of-thought reasoning in models like Qwen3. The OpenAI-compatible shim does not pass this option through. Without `think: false`, a 0.8B model can spend several minutes generating reasoning tokens before producing any output.
 
 **Bullet parsing**
-Both providers are prompted to output lines starting with `• `. The `_parse_bullets` function in `agent.py` also handles numbered lists and paragraph fallback, so formatting quirks don't break the response.
+All providers are prompted to output lines starting with `• `. The `_parse_bullets` function in `agent.py` also handles numbered lists and paragraph fallback, so formatting quirks don't break the response.
 
 **Image understanding**
-If the post contains images, their CDN URLs are attached to the LLM call. OpenAI receives them as `input_image` blocks; Anthropic as `image / source.url` blocks. Both use the model's vision capability without downloading bytes server-side.
+If the post contains images, their CDN URLs are attached to the LLM call. OpenAI receives them as `input_image` blocks; Anthropic as `image / source.url` blocks. Ollama does not receive images (most local models lack reliable vision support).
 
 **API key validation at startup**
 On boot, the backend validates each API key with a live HTTP request to the provider. The result is stored in `_providers` and exposed via `GET /providers`. The frontend reads this on page load and disables radio buttons for unavailable providers — no silent failures.
@@ -131,7 +147,7 @@ Each test case lists `expected_topics` — keywords that should appear somewhere
 ### Prerequisites
 
 - Docker & Docker Compose
-- An OpenAI API key (and optionally an Anthropic API key)
+- At least one of: an OpenAI API key, an Anthropic API key, or enough RAM to run a local model via Ollama
 
 `make up` installs [uv](https://docs.astral.sh/uv/) automatically if it is not found, and uses it to manage Python and the virtualenv.
 
@@ -150,7 +166,12 @@ Edit `.env` and add your API key(s):
 ```env
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...   # optional
+
+# Local model via Ollama (optional — leave blank to disable)
+OLLAMA_MODEL=qwen3.5:0.8b
 ```
+
+Any model available on [ollama.com/library](https://ollama.com/library) can be used. Smaller models (`0.5b`–`1.5b`) run on CPU; larger ones benefit from a GPU.
 
 ### 2. Start everything
 
@@ -162,7 +183,8 @@ This single command:
 1. Installs `uv` if missing (via the official installer)
 2. Creates `backend/.venv` with Python 3.12 if it does not already exist
 3. Installs all Python dependencies
-4. Runs `docker compose up --build` (backend on `:8000`, frontend on `:3000`)
+4. Runs `docker compose up --build` (backend on `:8000`, frontend on `:3000`, Ollama on `:11434`)
+5. Pulls the configured Ollama model and runs a warmup inference so the first real request is fast
 
 Open `http://localhost:3000` in your browser.
 
@@ -185,6 +207,7 @@ Ports can be overridden in `.env`:
 ```env
 BACKEND_PORT=8001
 FRONTEND_PORT=3001
+OLLAMA_PORT=11435
 ```
 
 ---
@@ -198,6 +221,18 @@ make dev
 ```
 
 Then open `frontend/index.html` directly in your browser — the JS detects it is not being served on port 3000 and calls `http://localhost:8000` directly.
+
+---
+
+## Smoke Tests
+
+`scripts/test_stack.py` verifies DDG search and Ollama inference independently of the full Docker stack:
+
+```bash
+# From the project root
+backend/.venv/Scripts/python.exe scripts/test_stack.py   # Windows
+backend/.venv/bin/python scripts/test_stack.py           # Linux / macOS
+```
 
 ---
 
@@ -228,9 +263,11 @@ The harness prints pass/fail per case and writes a markdown report to `backend/e
 | Feature | Status |
 |---|---|
 | Image understanding (GPT-4o vision / Claude vision) | Included |
-| Multi-provider comparison (OpenAI vs Anthropic) | Included |
+| Multi-provider support (OpenAI, Anthropic, Ollama) | Included |
+| Local model inference via Ollama (zero API cost) | Included |
 | URL citations with source attribution | Included |
 | Provider availability shown in UI (disabled if key missing) | Included |
+| DuckDuckGo search with rate-limit resilience | Included |
 | Configurable ports via `.env` | Included |
 | Cross-platform Makefile (Windows + Linux/macOS) | Included |
 
@@ -247,7 +284,7 @@ The harness prints pass/fail per case and writes a markdown report to `backend/e
 }
 ```
 
-`provider` accepts `"openai"` or `"anthropic"`.
+`provider` accepts `"openai"`, `"anthropic"`, or `"ollama"`.
 
 Response:
 
@@ -278,7 +315,9 @@ Returns which providers are available based on startup key validation:
 ```json
 {
   "openai": true,
-  "anthropic": false
+  "anthropic": false,
+  "ollama": true,
+  "ollama_model": "qwen3.5:0.8b"
 }
 ```
 
