@@ -51,8 +51,8 @@ def _build_post_context(post: BlueskyPost) -> str:
 # ---------------------------------------------------------------------------
 
 def _ddg_search(query: str, max_results: int = 5) -> list[dict]:
-    from duckduckgo_search import DDGS
-    from duckduckgo_search.exceptions import DuckDuckGoSearchException
+    from ddgs import DDGS
+    from ddgs.exceptions import DDGSException as DuckDuckGoSearchException
     for attempt in range(3):
         try:
             with DDGS(timeout=10) as ddgs:

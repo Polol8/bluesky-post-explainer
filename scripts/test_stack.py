@@ -30,8 +30,8 @@ FAIL = "[FAIL]"
 def test_ddg():
     print("-- DDG search -----------------------------")
     try:
-        from duckduckgo_search import DDGS
-        from duckduckgo_search.exceptions import DuckDuckGoSearchException
+        from ddgs import DDGS
+        from ddgs.exceptions import DDGSException as DuckDuckGoSearchException
 
         t0 = time.time()
         with DDGS(timeout=10) as ddgs:
