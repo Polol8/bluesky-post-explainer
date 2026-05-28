@@ -144,7 +144,9 @@ async def explain_post(req: ExplainRequest):
         raise HTTPException(status_code=502, detail=f"Failed to fetch Bluesky post: {exc}")
 
     try:
-        result = await explain(post, req.provider)
+        result = await asyncio.wait_for(explain(post, req.provider), timeout=700.0)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Agent timed out — try again or use a different provider")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}")
 

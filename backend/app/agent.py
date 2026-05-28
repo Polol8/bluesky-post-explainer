@@ -1,6 +1,7 @@
 import asyncio
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import anthropic
@@ -51,8 +52,18 @@ def _build_post_context(post: BlueskyPost) -> str:
 
 def _ddg_search(query: str, max_results: int = 5) -> list[dict]:
     from duckduckgo_search import DDGS
-    with DDGS() as ddgs:
-        return list(ddgs.text(query, max_results=max_results))
+    from duckduckgo_search.exceptions import DuckDuckGoSearchException
+    for attempt in range(3):
+        try:
+            with DDGS(timeout=10) as ddgs:
+                return list(ddgs.text(query, max_results=max_results))
+        except DuckDuckGoSearchException as exc:
+            if "202" not in str(exc) and "atelimit" not in str(exc):
+                raise
+            if attempt == 2:
+                return []
+            time.sleep(2 ** attempt)
+    return []
 
 
 async def _ddg_search_async(query: str, max_results: int = 5) -> list[dict]:
@@ -152,7 +163,10 @@ _SYSTEM_PROMPT = (
 
 
 async def explain_with_anthropic(post: BlueskyPost) -> ExplainResponse:
-    client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    client = anthropic.AsyncAnthropic(
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+        timeout=30.0,
+    )
 
     initial_content: list[dict] = [
         {
@@ -223,28 +237,35 @@ async def explain_with_ollama(post: BlueskyPost) -> ExplainResponse:
     citations = _collect_citations(results)
     search_context = _ddg_results_to_text(results)
 
-    client = AsyncOpenAI(base_url=f"{host}/v1", api_key="ollama")
+    import httpx
 
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    "Here is a Bluesky post to explain:\n\n"
-                    + _build_post_context(post)
-                    + "\n\nWeb search results for context:\n\n"
-                    + search_context
-                    + "\n\nNow write exactly 3-5 bullet points (starting with '• ') "
-                    "explaining what the post is about, who or what is referenced, "
-                    "and why it matters."
-                ),
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        resp = await client.post(
+            f"{host}/api/chat",
+            json={
+                "model": model,
+                "think": False,
+                "stream": False,
+                "messages": [
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {
+                        "role": "user",
+                        "content": (
+                            "Here is a Bluesky post to explain:\n\n"
+                            + _build_post_context(post)
+                            + "\n\nWeb search results for context:\n\n"
+                            + search_context
+                            + "\n\nNow write exactly 3-5 bullet points (starting with '• ') "
+                            "explaining what the post is about, who or what is referenced, "
+                            "and why it matters."
+                        ),
+                    },
+                ],
             },
-        ],
-    )
+        )
+        resp.raise_for_status()
+        content = resp.json()["message"]["content"]
 
-    content = response.choices[0].message.content or ""
     return ExplainResponse(
         bullets=_parse_bullets(content),
         post=post,

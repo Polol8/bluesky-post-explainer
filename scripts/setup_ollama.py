@@ -76,3 +76,21 @@ if result.returncode != 0:
     sys.exit(1)
 
 print(f"Ollama: '{model}' ready.")
+
+print(f"Ollama: warming up '{model}' (loading into memory)...", flush=True)
+try:
+    import json
+    warmup_req = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": "hi"}],
+        "stream": False,
+    }).encode()
+    req = urllib.request.Request(
+        f"http://localhost:{ollama_port}/v1/chat/completions",
+        data=warmup_req,
+        headers={"Content-Type": "application/json"},
+    )
+    urllib.request.urlopen(req, timeout=300)
+    print(f"Ollama: model warm.")
+except Exception as exc:
+    print(f"Ollama: warmup skipped ({exc})")

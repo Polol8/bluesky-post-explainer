@@ -36,7 +36,6 @@ help:
 
 ifeq ($(OS),Windows_NT)
 up:
-<<<<<<< HEAD
 	where uv >nul 2>&1 || (powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex" && echo. && echo Installed uv — open a new terminal and run 'make up' again. && exit 1)
 	if not exist $(VENV) (cd backend && uv venv --python 3.12 .venv)
 	cd backend && uv pip install -r requirements.txt
@@ -51,12 +50,9 @@ else
 up:
 	command -v uv >/dev/null 2>&1 || (curl -LsSf https://astral.sh/uv/install.sh | sh && echo "" && echo "Installed uv — run 'source ~/.local/bin/env && make up' to continue." && exit 1)
 	[ -d $(VENV) ] || (cd backend && uv venv --python 3.12 .venv)
-=======
-	if not exist $(VENV) (cd backend && uv venv .venv)
->>>>>>> 9b084fd (feature: local models)
 	cd backend && uv pip install -r requirements.txt
 	docker compose up --build -d
-	$(PY) scripts\setup_ollama.py
+	$(PY) scripts/setup_ollama.py
 	docker compose logs -f
 
 clean:
