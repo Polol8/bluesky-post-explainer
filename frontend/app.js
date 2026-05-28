@@ -16,9 +16,21 @@ async function initProviders() {
   try {
     const resp = await fetch(`${API_BASE}/providers`);
     if (!resp.ok) return;
-    const available = await resp.json();
+    const data = await resp.json();
 
-    for (const [provider, enabled] of Object.entries(available)) {
+    // Update Ollama badge with the actual model name
+    if (data.ollama_model) {
+      const badge = document.getElementById("ollama-badge");
+      if (badge) badge.textContent = `${data.ollama_model} + DDG`;
+    }
+
+    const availability = {
+      openai: data.openai,
+      anthropic: data.anthropic,
+      ollama: data.ollama,
+    };
+
+    for (const [provider, enabled] of Object.entries(availability)) {
       const radio = document.querySelector(`input[name="provider"][value="${provider}"]`);
       if (!radio) continue;
       const label = radio.closest("label");
@@ -26,8 +38,9 @@ async function initProviders() {
       if (!enabled) {
         radio.disabled = true;
         label.classList.add("provider-disabled");
-        label.title = `${provider} API key not configured`;
-        // If the disabled option was selected, move selection to the first available one
+        label.title = provider === "ollama"
+          ? "Ollama not running or model not pulled"
+          : `${provider} API key not configured`;
         if (radio.checked) radio.checked = false;
       }
     }

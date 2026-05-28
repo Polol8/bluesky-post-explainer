@@ -3,6 +3,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,8 +16,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Populated at startup after live key validation
-_providers: dict[str, bool] = {"openai": False, "anthropic": False}
+_providers: dict[str, bool] = {"openai": False, "anthropic": False, "ollama": False}
 
 
 async def _validate_openai() -> bool:
@@ -24,7 +24,6 @@ async def _validate_openai() -> bool:
     if not key:
         return False
     try:
-        import httpx
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 "https://api.openai.com/v1/models",
@@ -41,7 +40,6 @@ async def _validate_anthropic() -> bool:
     if not key:
         return False
     try:
-        import httpx
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 "https://api.anthropic.com/v1/models",
@@ -53,21 +51,46 @@ async def _validate_anthropic() -> bool:
         return False
 
 
+async def _validate_ollama() -> bool:
+    host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    model = os.getenv("OLLAMA_MODEL", "llama3.2")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{host}/api/tags")
+            if resp.status_code != 200:
+                return False
+            available = [m["name"].split(":")[0] for m in resp.json().get("models", [])]
+            if model.split(":")[0] not in available:
+                logger.warning(
+                    "Ollama is running but model '%s' is not pulled. "
+                    "Run: ollama pull %s",
+                    model, model,
+                )
+                return False
+            return True
+    except Exception as exc:
+        logger.warning("Ollama validation failed: %s", type(exc).__name__)
+        return False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Validating API keys...")
-    openai_ok, anthropic_ok = await asyncio.gather(
-        _validate_openai(), _validate_anthropic()
+    openai_ok, anthropic_ok, ollama_ok = await asyncio.gather(
+        _validate_openai(), _validate_anthropic(), _validate_ollama()
     )
     _providers["openai"] = openai_ok
     _providers["anthropic"] = anthropic_ok
+    _providers["ollama"] = ollama_ok
 
-    for name, ok in _providers.items():
-        mark = "OK" if ok else "missing or invalid"
-        print(f"  {name}: {mark}")
-
-    if not any(_providers.values()):
-        logger.error("No valid API keys found — /explain will be unavailable.")
+    model = os.getenv("OLLAMA_MODEL", "llama3.2")
+    labels = {
+        "openai": "OK" if openai_ok else "missing or invalid",
+        "anthropic": "OK" if anthropic_ok else "missing or invalid",
+        "ollama": f"OK ({model})" if ollama_ok else "not running or model not pulled",
+    }
+    for name, label in labels.items():
+        print(f"  {name}: {label}")
 
     yield
 
@@ -89,18 +112,28 @@ async def health():
 
 @app.get("/providers")
 async def providers():
-    return _providers
+    ollama_ok = await _validate_ollama()
+    _providers["ollama"] = ollama_ok
+    return {
+        "openai": _providers["openai"],
+        "anthropic": _providers["anthropic"],
+        "ollama": ollama_ok,
+        "ollama_model": os.getenv("OLLAMA_MODEL", "llama3.2"),
+    }
 
 
 @app.post("/explain", response_model=ExplainResponse)
 async def explain_post(req: ExplainRequest):
     if req.provider not in _providers:
-        raise HTTPException(status_code=400, detail="provider must be 'openai' or 'anthropic'")
+        raise HTTPException(status_code=400, detail="provider must be 'openai', 'anthropic', or 'ollama'")
+
+    if req.provider == "ollama":
+        _providers["ollama"] = await _validate_ollama()
 
     if not _providers[req.provider]:
         raise HTTPException(
             status_code=400,
-            detail=f"{req.provider} API key is missing or invalid",
+            detail=f"{req.provider} is not available — check your .env or Ollama setup",
         )
 
     try:
@@ -111,7 +144,9 @@ async def explain_post(req: ExplainRequest):
         raise HTTPException(status_code=502, detail=f"Failed to fetch Bluesky post: {exc}")
 
     try:
-        result = await explain(post, req.provider)
+        result = await asyncio.wait_for(explain(post, req.provider), timeout=700.0)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Agent timed out — try again or use a different provider")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}")
 
