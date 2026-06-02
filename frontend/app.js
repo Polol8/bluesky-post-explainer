@@ -111,6 +111,16 @@ function renderResults(data) {
     imagesEl.appendChild(el);
   }
 
+  // Parent post (thread context)
+  const parentEl = document.getElementById("res-parent");
+  if (post.parent_text) {
+    document.getElementById("res-parent-handle").textContent = post.parent_author_handle ? `@${post.parent_author_handle}` : "";
+    document.getElementById("res-parent-text").textContent = post.parent_text;
+    parentEl.classList.remove("hidden");
+  } else {
+    parentEl.classList.add("hidden");
+  }
+
   // External embed
   const extEl = document.getElementById("res-external");
   if (post.external) {
@@ -129,6 +139,36 @@ function renderResults(data) {
     const li = document.createElement("li");
     li.textContent = b;
     bulletsEl.appendChild(li);
+  }
+
+  // Thread replies
+  const threadRepliesSection = document.getElementById("thread-replies-section");
+  const threadRepliesEl = document.getElementById("res-thread-replies");
+  threadRepliesEl.innerHTML = "";
+  if (post.thread_replies && post.thread_replies.length > 0) {
+    document.getElementById("res-replies-count").textContent = `${post.thread_replies.length} reply${post.thread_replies.length !== 1 ? "ies" : ""}`;
+    for (const r of post.thread_replies) {
+      const card = document.createElement("div");
+      card.className = "reply-card";
+      card.innerHTML = `
+        <div class="post-header">
+          <div class="author-info">
+            <span class="display-name">${escapeHtml(r.author_display_name)}</span>
+            <span class="handle">@${escapeHtml(r.author_handle)}</span>
+          </div>
+          <div class="post-stats">
+            <span>♡ ${r.likes.toLocaleString()}</span>
+            <span>↺ ${r.reposts.toLocaleString()}</span>
+            <span>💬 ${r.replies.toLocaleString()}</span>
+          </div>
+        </div>
+        <p class="post-text">${escapeHtml(r.text)}</p>
+      `;
+      threadRepliesEl.appendChild(card);
+    }
+    threadRepliesSection.classList.remove("hidden");
+  } else {
+    threadRepliesSection.classList.add("hidden");
   }
 
   // Citations
@@ -163,6 +203,14 @@ function showError(msg) {
 function hideAll() {
   resultsEl.classList.add("hidden");
   errorSection.classList.add("hidden");
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function setLoading(on) {

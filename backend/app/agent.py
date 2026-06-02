@@ -32,7 +32,12 @@ def _parse_bullets(text: str) -> list[str]:
 
 
 def _build_post_context(post: BlueskyPost) -> str:
-    parts = [f'Post by @{post.author_handle} ("{post.author_display_name}"):']
+    parts = []
+    if post.parent_text:
+        parts.append(
+            f'Replying to @{post.parent_author_handle or "unknown"}: "{post.parent_text}"'
+        )
+    parts.append(f'Post by @{post.author_handle} ("{post.author_display_name}"):')
     parts.append(f'"{post.text}"')
     if post.external:
         parts.append(f"Linked content: {post.external.title} — {post.external.description}")
@@ -42,6 +47,15 @@ def _build_post_context(post: BlueskyPost) -> str:
             f"[{len(post.images)} image(s) attached"
             + (f': {"; ".join(alt_texts)}' if alt_texts else "")
             + "]"
+        )
+    if post.thread_replies:
+        top = post.thread_replies[:5]
+        parts.append(
+            f"Top replies ({len(top)}):\n"
+            + "\n".join(
+                f'  @{r.author_handle}: "{r.text}"'
+                for r in top
+            )
         )
     return "\n".join(parts)
 

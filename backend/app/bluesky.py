@@ -1,6 +1,6 @@
 import re
 import httpx
-from .models import BlueskyPost, BlueskyImage, BlueskyExternal
+from .models import BlueskyPost, BlueskyImage, BlueskyExternal, BlueskyReply
 
 BSKY_API = "https://public.api.bsky.app/xrpc"
 
@@ -28,14 +28,44 @@ async def fetch_post(url: str) -> BlueskyPost:
         uri = f"at://{did}/app.bsky.feed.post/{rkey}"
         thread_resp = await client.get(
             f"{BSKY_API}/app.bsky.feed.getPostThread",
-            params={"uri": uri, "depth": 0},
+            params={"uri": uri, "depth": 1, "parentHeight": 1},
         )
         thread_resp.raise_for_status()
         thread_data = thread_resp.json()
 
-    post_data = thread_data["thread"]["post"]
+    thread_node = thread_data["thread"]
+    post_data = thread_node["post"]
     record = post_data["record"]
     author = post_data["author"]
+
+    # Parent post (if this post is a reply in a thread)
+    parent_text: str | None = None
+    parent_author_handle: str | None = None
+    parent_node = thread_node.get("parent")
+    if parent_node and parent_node.get("$type") == "app.bsky.feed.defs#threadViewPost":
+        parent_post = parent_node.get("post", {})
+        parent_text = parent_post.get("record", {}).get("text", "") or None
+        parent_author_handle = parent_post.get("author", {}).get("handle") or None
+
+    # All direct replies, sorted by likes
+    thread_replies: list[BlueskyReply] = []
+    for reply_node in thread_node.get("replies", []):
+        if reply_node.get("$type") != "app.bsky.feed.defs#threadViewPost":
+            continue
+        rp = reply_node.get("post", {})
+        rp_text = rp.get("record", {}).get("text", "")
+        if not rp_text:
+            continue
+        rp_author = rp.get("author", {})
+        thread_replies.append(BlueskyReply(
+            author_handle=rp_author.get("handle", ""),
+            author_display_name=rp_author.get("displayName", "") or rp_author.get("handle", ""),
+            text=rp_text,
+            likes=rp.get("likeCount", 0),
+            reposts=rp.get("repostCount", 0),
+            replies=rp.get("replyCount", 0),
+        ))
+    thread_replies.sort(key=lambda r: r.likes, reverse=True)
 
     images: list[BlueskyImage] = []
     external: BlueskyExternal | None = None
@@ -85,4 +115,7 @@ async def fetch_post(url: str) -> BlueskyPost:
         likes=post_data.get("likeCount", 0),
         reposts=post_data.get("repostCount", 0),
         replies=post_data.get("replyCount", 0),
+        parent_text=parent_text,
+        parent_author_handle=parent_author_handle,
+        thread_replies=thread_replies,
     )

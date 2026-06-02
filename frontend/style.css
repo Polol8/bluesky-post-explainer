@@ -358,6 +358,76 @@ button#submit-btn:disabled {
   text-decoration: underline;
 }
 
+/* Parent post (thread context) */
+.parent-post {
+  border-left: 3px solid var(--border);
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  border-radius: 0 6px 6px 0;
+  background: var(--bg);
+}
+
+.parent-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.parent-label span {
+  color: var(--blue);
+  font-weight: 500;
+}
+
+.parent-post p {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Thread replies */
+.replies-card {
+  margin-bottom: 16px;
+}
+
+.replies-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.replies-header h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.replies-count {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.reply-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 8px;
+}
+
+.reply-card:last-child {
+  margin-bottom: 0;
+}
+
 /* Utility */
 .hidden {
   display: none !important;

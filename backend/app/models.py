@@ -13,6 +13,15 @@ class BlueskyExternal(BaseModel):
     uri: str
 
 
+class BlueskyReply(BaseModel):
+    author_handle: str
+    author_display_name: str
+    text: str
+    likes: int = 0
+    reposts: int = 0
+    replies: int = 0
+
+
 class BlueskyPost(BaseModel):
     uri: str
     text: str
@@ -24,6 +33,9 @@ class BlueskyPost(BaseModel):
     likes: int = 0
     reposts: int = 0
     replies: int = 0
+    parent_text: Optional[str] = None
+    parent_author_handle: Optional[str] = None
+    thread_replies: list[BlueskyReply] = []
 
 
 class ExplainRequest(BaseModel):

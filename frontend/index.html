@@ -62,6 +62,10 @@
 
       <section id="results" class="hidden">
         <div class="post-card">
+          <div id="res-parent" class="parent-post hidden">
+            <span class="parent-label">Replying to <span id="res-parent-handle"></span></span>
+            <p id="res-parent-text"></p>
+          </div>
           <div class="post-header">
             <div class="author-info">
               <span class="display-name" id="res-display-name"></span>
@@ -81,6 +85,14 @@
               <span id="res-ext-desc"></span>
             </a>
           </div>
+        </div>
+
+        <div id="thread-replies-section" class="replies-card hidden">
+          <div class="replies-header">
+            <h3>Replies</h3>
+            <span id="res-replies-count" class="replies-count"></span>
+          </div>
+          <div id="res-thread-replies"></div>
         </div>
 
         <div class="explanation-card">
